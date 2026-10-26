@@ -23,7 +23,10 @@ export function ChatHeader({ chatId: chatIdProp, workspaceId }) {
   const nav = useChatNav();
   const TitleIcon = chatMode === 'code' ? CodeIcon : AgentIcon;
 
+  // The actual chatId to use for actions (either passed directly or resolved from workspace)
   const chatId = resolvedChatId;
+
+  // Whether to show the dropdown and inline-edit features
   const showControls = chatId && title && title !== 'New Chat';
 
   const fetchMeta = useCallback(() => {
@@ -58,11 +61,28 @@ export function ChatHeader({ chatId: chatIdProp, workspaceId }) {
 
   useEffect(() => {
     fetchMeta();
-    const titleHandler = () => fetchMeta();
-    window.addEventListener('chat-title-updated', titleHandler);
-    return () => window.removeEventListener('chat-title-updated', titleHandler);
-  }, [fetchMeta]);
+    const titleHandler = (e) => {
+      if (e.detail.chatId === chatId) {
+        setTitle(e.detail.title);
+        if (e.detail.chatMode) setChatMode(e.detail.chatMode);
+        document.title = e.detail.title;
+      }
+    };
+    const starHandler = (e) => {
+      if (e.detail.chatId === chatId) {
+        setStarred(e.detail.starred);
+      }
+    };
+    window.addEventListener('chatTitleUpdated', titleHandler);
+    window.addEventListener('chatStarUpdated', starHandler);
+    return () => {
+      window.removeEventListener('chatTitleUpdated', titleHandler);
+      window.removeEventListener('chatStarUpdated', starHandler);
+      document.title = 'ThePopeBot';
+    };
+  }, [fetchMeta, chatId]);
 
+  // Auto-focus and select all when entering inline edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -75,57 +95,43 @@ export function ChatHeader({ chatId: chatIdProp, workspaceId }) {
     setIsEditing(true);
   };
 
+  const saveEdit = async () => {
+    setIsEditing(false);
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === title) return;
+    setTitle(trimmed);
+    await renameChat(chatId, trimmed);
+    window.dispatchEvent(new CustomEvent('chatTitleUpdated', { detail: { chatId, title: trimmed } }));
+  };
+
   const cancelEdit = () => {
     setIsEditing(false);
-    setEditValue('');
   };
 
-  const saveEdit = async () => {
-    const next = editValue.trim();
-    if (!next || !chatId || next === title) {
-      cancelEdit();
-      return;
-    }
-    const result = await renameChat(chatId, next);
-    if (!result?.error) {
-      setTitle(next);
-      document.title = next;
-      window.dispatchEvent(new Event('chat-title-updated'));
-    }
-    setIsEditing(false);
-  };
-
-  const handleRenameFromDialog = async (next) => {
-    if (!chatId || !next?.trim()) return;
-    const result = await renameChat(chatId, next.trim());
-    if (!result?.error) {
-      setTitle(next.trim());
-      document.title = next.trim();
-      window.dispatchEvent(new Event('chat-title-updated'));
-    }
-    setShowRenameDialog(false);
+  const handleRenameFromDialog = async (newTitle) => {
+    setTitle(newTitle);
+    await renameChat(chatId, newTitle);
+    window.dispatchEvent(new CustomEvent('chatTitleUpdated', { detail: { chatId, title: newTitle } }));
   };
 
   const handleStar = async () => {
-    if (!chatId) return;
-    const next = starred ? 0 : 1;
-    const result = await starChat(chatId, next);
-    if (!result?.error) setStarred(next);
+    const newStarred = starred ? 0 : 1;
+    setStarred(newStarred);
+    await starChat(chatId);
+    window.dispatchEvent(new CustomEvent('chatStarUpdated', { detail: { chatId, starred: newStarred } }));
   };
 
   const handleDelete = async () => {
-    if (!chatId) return;
-    const result = await deleteChat(chatId);
     setShowDeleteConfirm(false);
-    if (!result?.error) {
-      if (nav?.navigate) nav.navigate('/chat');
-      else window.location.href = '/chat';
-    }
+    await deleteChat(chatId);
+    window.dispatchEvent(new CustomEvent('chatDeleted', { detail: { chatId } }));
+    nav?.navigateToChat?.(null);
   };
 
   return (
     <>
       <header className="sticky top-0 flex items-center gap-2 bg-background px-2 py-1.5 md:px-2 z-10 min-w-0">
+        {/* Mobile-only: open sidebar sheet */}
         <div className="md:hidden">
           <SidebarTrigger />
         </div>

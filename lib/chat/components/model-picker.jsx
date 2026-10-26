@@ -19,7 +19,7 @@ export function ModelPicker({ className }) {
   const [providers, setProviders] = useState([]);
   const [active, setActive] = useState({ provider: '', model: '' });
   const [keyDraft, setKeyDraft] = useState('');
-  const [keyFor, setKeyFor] = useState(null);
+  const [keyFor, setKeyFor] = useState(null); // provider slug needing a key
   const ref = useRef(null);
 
   const load = useCallback(async () => {
@@ -64,6 +64,7 @@ export function ModelPicker({ className }) {
         }
       }
 
+      // Prefer providers with keys first, then OpenRouter / Mercury
       list.sort((a, b) => {
         if (a.hasKey !== b.hasKey) return a.hasKey ? -1 : 1;
         const score = (s) => (s === 'openrouter' ? 0 : s === 'mercury' ? 1 : 2);
