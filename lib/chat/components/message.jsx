@@ -5,6 +5,7 @@ import { Streamdown } from 'streamdown';
 import { cn } from '../utils.js';
 import { SpinnerIcon, FileTextIcon, CopyIcon, CheckIcon, RefreshIcon, SquarePenIcon, WrenchIcon, XIcon, ChevronDownIcon } from './icons.js';
 import { getToolDisplayName } from './tool-names.js';
+import { CrystallizeText } from './crystallize-text.jsx';
 
 function LinkSafetyModal({ url, isOpen, onClose, onConfirm }) {
   const [copied, setCopied] = useState(false);
@@ -181,15 +182,6 @@ function ToolCall({ part, className }) {
               return null;
             })()}
           </span>
-          {/* DISABLED — may be re-enabled later. Do NOT remove from codebase.
-             Shows the tool's prompt text as a subtitle below the tool name.
-          {(() => {
-            const prompt = part.input?.prompt;
-            if (!prompt) return null;
-            return (
-              <span className="text-xs text-muted-foreground whitespace-pre-wrap">{prompt}</span>
-            );
-          })()} */}
         </span>
         <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
           {isRunning && (
@@ -433,7 +425,15 @@ export function PreviewMessage({ message, isLoading, onRetry, onEdit }) {
                         if (part.type === 'text') {
                           const prevPart = message.parts[i - 1];
                           const afterTool = prevPart?.type?.startsWith('tool-');
-                          return <Streamdown key={i} className={afterTool ? 'mt-3' : undefined} mode={isLoading ? 'streaming' : 'static'} linkSafety={linkSafety}>{part.text}</Streamdown>;
+                          return (
+                            <CrystallizeText
+                              key={i}
+                              text={part.text}
+                              isStreaming={isLoading}
+                              className={afterTool ? 'mt-3' : undefined}
+                              linkSafety={linkSafety}
+                            />
+                          );
                         }
                         if (part.type === 'data-error') {
                           const prevPart = message.parts[i - 1];
@@ -480,7 +480,11 @@ export function PreviewMessage({ message, isLoading, onRetry, onEdit }) {
                       )}
                     </>
                   ) : text ? (
-                    <Streamdown mode={isLoading ? 'streaming' : 'static'} linkSafety={linkSafety}>{text}</Streamdown>
+                    <CrystallizeText
+                      text={text}
+                      isStreaming={isLoading}
+                      linkSafety={linkSafety}
+                    />
                   ) : isLoading && !hasToolParts ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <SpinnerIcon size={14} />
