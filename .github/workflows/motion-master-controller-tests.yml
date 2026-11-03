@@ -1,0 +1,38 @@
+name: PopeBot Motion Master controller contract
+
+on:
+  push:
+    branches:
+      - "agent/popebot-motionmaster-controller"
+    paths:
+      - "templates/skills-library/motion-master/**"
+      - ".github/workflows/motion-master-controller-tests.yml"
+  pull_request:
+    paths:
+      - "templates/skills-library/motion-master/**"
+      - ".github/workflows/motion-master-controller-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check private controller and tests
+        run: |
+          node --check templates/skills-library/motion-master/motion-master.mjs
+          node --check templates/skills-library/motion-master/motion-master.test.mjs
+      - name: Execute isolated HTTP contract tests
+        run: node --test templates/skills-library/motion-master/motion-master.test.mjs
+      - name: Validate skill frontmatter and prevent secret/model dependencies
+        run: |
+          grep -q '^name: motion-master$' templates/skills-library/motion-master/SKILL.md
+          grep -q '^description:' templates/skills-library/motion-master/SKILL.md
+          ! grep -R -E 'sk-proj-|ghp_|BEGIN (RSA|OPENSSH) PRIVATE KEY' templates/skills-library/motion-master/
