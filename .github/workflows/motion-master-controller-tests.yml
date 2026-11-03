@@ -31,6 +31,21 @@ jobs:
           node --check templates/skills-library/motion-master/motion-master.test.mjs
       - name: Execute isolated HTTP contract tests
         run: node --test templates/skills-library/motion-master/motion-master.test.mjs
+      - name: Checkout pinned public Motion Master API for real cross-repo contract
+        uses: actions/checkout@v4
+        with:
+          repository: executiveusa/motionmaster
+          ref: 50c0a97482e2c218b89916c491984f8a7923794c
+          path: motionmaster-test
+          persist-credentials: false
+      - name: Build real Motion Master API
+        run: |
+          npm ci --prefix motionmaster-test/mcp --ignore-scripts --no-audit --no-fund
+          npm run build --prefix motionmaster-test/mcp
+      - name: Test authenticated PopeBot commands against disposable Motion Master server
+        env:
+          MOTION_MASTER_TEST_REPO: motionmaster-test
+        run: node --test templates/skills-library/motion-master/motion-master.real-api.test.mjs
       - name: Validate skill frontmatter and prevent secret/model dependencies
         run: |
           grep -q '^name: motion-master$' templates/skills-library/motion-master/SKILL.md
