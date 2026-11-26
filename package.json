@@ -36,7 +36,9 @@
     "./oauth": "./lib/oauth/helper.js",
     "./oauth/providers": "./lib/oauth/providers.js",
     "./maintenance": "./lib/maintenance.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./telar/api": "./lib/telar/api.js",
+    "./telar/ui": "./lib/telar/ui.js"
   },
   "files": [
     "bin/",
